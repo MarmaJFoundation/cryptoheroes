@@ -150,6 +150,7 @@ public class Database : MonoBehaviour
     public static void SaveDatabase()
     {
         PlayerPrefs.SetString(databaseName, XMLGenerator.SerializeObject(databaseStruct, typeof(DatabaseStruct)));
+        PlayerPrefs.Save();
     }
     public static void AddItem(ItemData itemData)
     {

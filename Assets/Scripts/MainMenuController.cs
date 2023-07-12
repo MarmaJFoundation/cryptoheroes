@@ -289,7 +289,11 @@ public class MainMenuController : MonoBehaviour
     {
         nearHelper.Logout(true);
         Database.SaveDatabase();
-        SceneManager.LoadScene(0);
+
+        BaseUtils.ShowLoading();
+
+        nearHelper.DelayedLogout();
+        //SceneManager.LoadScene(0);
     }
     public void OnBackToMainScreenClick(bool forceUpdate = false)
     {

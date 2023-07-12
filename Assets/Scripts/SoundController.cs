@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -23,7 +24,15 @@ public class SoundController : MonoBehaviour
     }
     public static void PlayMusic(string musicName)
     {
-        soundController.StartCoroutine(LoadMusicAndPlay(musicName));
+        try
+        {
+            soundController.StartCoroutine(LoadMusicAndPlay(musicName));
+        }
+        catch (Exception ex)
+        {
+
+            Debug.Log(ex.Message);
+        }
     }
     public static void StopMusic()
     {
@@ -68,22 +77,36 @@ public class SoundController : MonoBehaviour
                 yield return null;
             }
         }
-        AudioClip audioClip = soundDict[musicName];
-        audioClip.LoadAudioData();
-        while (audioClip.loadState != AudioDataLoadState.Loaded)
+
+        AudioClip audioClip = null;
+        try
         {
-            yield return null;
+            audioClip = soundDict[musicName];
         }
-        musicSource.volume = 0;
-        musicSource.clip = audioClip;
-        musicSource.Play();
-        timer = 0;
-        while (timer <= 1)
+        catch (Exception ex)
         {
-            musicSource.volume = Mathf.Lerp(0, (100 - Database.databaseStruct.musicVolume) / 100f, timer);
-            timer += Time.deltaTime;
+            Debug.Log(ex.Message);
         }
-        musicSource.volume = (100 - Database.databaseStruct.musicVolume) / 100f;
+
+        if (audioClip)
+        {
+            audioClip.LoadAudioData();
+
+            while (audioClip.loadState != AudioDataLoadState.Loaded)
+            {
+                yield return null;
+            }
+            musicSource.volume = 0;
+            musicSource.clip = audioClip;
+            musicSource.Play();
+            timer = 0;
+            while (timer <= 1)
+            {
+                musicSource.volume = Mathf.Lerp(0, (100 - Database.databaseStruct.musicVolume) / 100f, timer);
+                timer += Time.deltaTime;
+            }
+            musicSource.volume = (100 - Database.databaseStruct.musicVolume) / 100f;
+        }
     }
     public static void OnChangeMusicVolume()
     {
@@ -97,7 +120,15 @@ public class SoundController : MonoBehaviour
         }
         GameObject soundObj = Instantiate(soundPrefab);
         AudioSource audioSource = soundObj.GetComponent<AudioSource>();
-        audioSource.clip = soundDict[soundName];
+
+        try
+        {
+            audioSource.clip = soundDict[soundName];
+        } catch (Exception ex)
+        {
+            Debug.Log(ex.Message);
+        }
+        
         audioSource.Play();
         audioSource.volume = (100 - Database.databaseStruct.soundVolume) / 100f * volumeModifier;
         audioSource.pitch = randomPitch ? BaseUtils.RandomFloat(.9f, 1.1f) : 1;

@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,7 +26,7 @@ public class NearHelper : MonoBehaviour
     private string ContractId = "pixeltoken.testnet";
     [HideInInspector]
     public string WalletSuffix = ".testnet";
-    private string BackendUri = "https://intern-testnet.pixeldapps.co/api";
+    private string BackendUri = "https://pd-testnet.marmaj.org/api";
     public bool Testnet = true;
     private bool firstLogin = true;
     public GameController gameController;
@@ -44,20 +45,74 @@ public class NearHelper : MonoBehaviour
     [HideInInspector]
     public DataGetState dataGetState;
     private int classIndex;
+
+    [DllImport("__Internal")]
+    private static extern void WSInit(string callbackClass, string callbackMethod);
+    [DllImport("__Internal")]
+    private static extern void WSLogin(string contractId);
+    [DllImport("__Internal")]
+    public static extern void WSLogout();
+    public void DelayedLogout()
+    {
+        Invoke("WSLogout", 2);
+    }
+    [DllImport("__Internal")]
+    private static extern void AddKey(string publicKey, string contractId);
+
+    [SerializeField] private GameObject validationFailedWindow;
+
     private void Start()
     {
+        if (!Testnet)
+        {
+            BackendUri = "https://pd.marmaj.org/api";
+            WalletUri = "https://wallet.near.org";
+            ContractId = "pixeltoken.near";
+            WalletSuffix = ".near";
+        }
+
+#if UNITY_EDITOR
+        Setup();
+#else
+        WSInit(this.gameObject.name, "WSInitFinished");
+#endif
+    }
+
+    public void WSInitFinished(string accountId)
+    {
+        if (!string.IsNullOrEmpty(accountId) 
+            && (string.IsNullOrEmpty(Database.databaseStruct.playerAccount) || Database.databaseStruct.playerAccount != accountId))
+        {
+            if (accountId.Contains(WalletSuffix))
+            {
+                Database.databaseStruct.playerAccount = accountId;
+            } 
+            else
+            {
+                Database.databaseStruct.playerAccount = accountId + WalletSuffix;
+            }
+
+            StartCoroutine(WebHelper.SendGet<ProxyAccessKeyResponse>(BackendUri + "/proxy/get-ed25519pair", LoginCallback));
+        }
+        else
+        {
+            if (string.IsNullOrEmpty(accountId))
+            {
+                Database.databaseStruct.playerAccount = null;
+            }
+
+            Setup();
+        }
+    }
+
+    public void Setup()
+    {
+        validationFailedWindow.SetActive(false);
         loginController.Setup();
         if (BaseUtils.offlineMode)
         {
             loginController.OnReceiveLoginAuthorise();
             return;
-        }
-        if (!Testnet)
-        {
-            BackendUri = "https://ecosystem.pixeldapps.co/api";
-            WalletUri = "https://wallet.near.org";
-            ContractId = "pixeltoken.near";
-            WalletSuffix = ".near";
         }
         if (Database.databaseStruct.playerAccount != null && Database.databaseStruct.privateKey != null && Database.databaseStruct.publicKey != null)
         {
@@ -69,6 +124,7 @@ public class NearHelper : MonoBehaviour
             Debug.Log("No login found, please login");
         }
     }
+
     public void CheckForValidLogin()
     {
         StartCoroutine(CheckLoginValid(Database.databaseStruct.playerAccount, Database.databaseStruct.publicKey));
@@ -94,11 +150,34 @@ public class NearHelper : MonoBehaviour
         StartCoroutine(WebHelper.SendGet<ProxyAccessKeyResponse>(BackendUri + "/proxy/get-ed25519pair", LoginCallback));
     }
 
+    public void WalletSelectorLogin()
+    {
+        WSLogin(this.ContractId);
+    }
+
+    public void AddKeyFinished()
+    {
+        Setup();
+    }
+
+    private IEnumerator AddKeyCoroutine()
+    {
+        BaseUtils.ShowLoading();
+
+        yield return new WaitForSeconds(1f);
+
+        AddKey(Database.databaseStruct.publicKey, ContractId);
+    }
+
     private void LoginCallback(ProxyAccessKeyResponse res)
     {
         Database.databaseStruct.privateKey = res.privateKey;
         Database.databaseStruct.publicKey = res.publicKey;
-        Application.OpenURL(WalletUri + "/login/?success_url=https%3A%2F%2Fecosystem.pixeldapps.co%2Fcallback%3Fpage%3Dlogin_success&failure_url=https%3A%2F%2Fecosystem.pixeldapps.co%2Fcallback%3Fpage%3Dlogin_fail&public_key=" + res.publicKey + "&contract_id=" + ContractId);
+
+        Database.SaveDatabase();
+
+        StartCoroutine(AddKeyCoroutine());
+        //Application.OpenURL(WalletUri + "/login/?success_url=https%3A%2F%2Fecosystem.pixeldapps.co%2Fcallback%3Fpage%3Dlogin_success&failure_url=https%3A%2F%2Fecosystem.pixeldapps.co%2Fcallback%3Fpage%3Dlogin_fail&public_key=" + res.publicKey + "&contract_id=" + ContractId);
         //Application.OpenURL(WalletUri + "/login/?referrer=CryptoHero%20Client&public_key=" + res.publicKey + "&contract_id=" + ContractId);
     }
     public void Logout(bool fromPlayer = false)
@@ -141,15 +220,24 @@ public class NearHelper : MonoBehaviour
         }
         if (!res.data.valid)
         {
+            /*
             BaseUtils.ShowWarningMessage("Error on login", new string[2] { "Login was not possible!", "Data was not valid." });
             Logout();
             Database.databaseStruct.validCredentials = false;
             loginController.Setup();
+            */
+
+            validationFailedWindow.SetActive(true);
             return;
         }
-        string cropAllowance = res.data.allowance.Substring(0, 4);
-        float.TryParse(cropAllowance, out float allowanceFloat);
-        Database.databaseStruct.allowance = allowanceFloat;
+
+        if (!string.IsNullOrEmpty(res.data.allowance))
+        {
+            string cropAllowance = res.data.allowance.Substring(0, 4);
+            float.TryParse(cropAllowance, out float allowanceFloat);
+            Database.databaseStruct.allowance = allowanceFloat;
+        }
+        
         if (!res.data.player_registered)
         {
             StartCoroutine(RegisterPlayerCoroutine());

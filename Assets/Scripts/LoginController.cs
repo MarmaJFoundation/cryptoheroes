@@ -26,7 +26,7 @@ public class LoginController : MonoBehaviour
         loginCanvas.gameObject.SetActive(true);
         windowObj.SetActive(true);
         customInput.ResetInput();
-        customInput.OnPointerClick(null);
+        //customInput.OnPointerClick(null);
         eventSystem.SetSelectedGameObject(customInput.gameObject);
         nearText.SetString(nearhelper.Testnet ? ".testnet" : ".near");
     }
@@ -35,7 +35,7 @@ public class LoginController : MonoBehaviour
         Setup();
         customInput.enabled = true;
         customInput.ResetInput();
-        customInput.OnPointerClick(null);
+        //customInput.OnPointerClick(null);
         eventSystem.SetSelectedGameObject(customInput.gameObject);
         authButtonObj.SetActive(false);
         loginButtonObj.SetActive(true);
@@ -43,6 +43,7 @@ public class LoginController : MonoBehaviour
     //#protocol
     public void OnLoginClick()
     {
+/*
         if (customInput.typeString == "")
         {
             BaseUtils.ShowWarningMessage("Error!", new string[2] { "Address cannot be empty.", "Enter your Near Wallet adress." });
@@ -59,15 +60,18 @@ public class LoginController : MonoBehaviour
             playerAccountName = playerAccountName.Remove(playerAccountName.IndexOf('.'), 5);
         }
         customInput.enabled = false;
+*/
         if (BaseUtils.offlineMode)
         {
             BaseUtils.ShowLoading();
         }
         else
         {
-            nearhelper.Login(playerAccountName);
+            //nearhelper.Login(playerAccountName);
+            nearhelper.WalletSelectorLogin();
         }
-        StartCoroutine(WaitAndShowAuthButton());
+
+        //StartCoroutine(WaitAndShowAuthButton());
     }
     private IEnumerator WaitAndShowAuthButton()
     {
@@ -112,7 +116,7 @@ public class LoginController : MonoBehaviour
         authButtonObj.SetActive(false);
         customInput.enabled = true;
         customInput.ResetInput();
-        customInput.OnPointerClick(null);
+        //customInput.OnPointerClick(null);
         eventSystem.SetSelectedGameObject(customInput.gameObject);
     }
     public void OnReceiveLoginAuthorise()
