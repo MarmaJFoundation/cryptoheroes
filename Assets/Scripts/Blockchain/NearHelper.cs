@@ -21,7 +21,7 @@ public enum DataGetState
 
 public class NearHelper : MonoBehaviour
 {
-    private string WalletUri = "https://www.mynearwallet.com/";
+    private string WalletUri = "https://testnet.mynearwallet.com/";
     private string ContractId = "pixeltoken.testnet";
     [HideInInspector]
     public string WalletSuffix = ".testnet";
