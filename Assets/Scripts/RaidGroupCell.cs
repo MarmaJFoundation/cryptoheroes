@@ -39,8 +39,8 @@ public class RaidGroupCell : EnhancedScrollerCellView
         UpdateKillMessage();
         for (int i = 0; i < data.teamClasses.Length; i++)
         {
-            //teamImages[i].sprite = BaseUtils.knightSprites[(int)data.teamClasses[i]-1];
-            //teamImages[i].SetNativeSize();
+            teamImages[i].sprite = BaseUtils.knightSprites[(int)data.teamClasses[i]-1];
+            teamImages[i].SetNativeSize();
             switch (data.teamClasses[i])
             {
                 case ClassType.Mage:
